@@ -7,21 +7,8 @@ import random
 import math
 import xlrd
 
-# Инициализируем книгу
-book = xlwt.Workbook(encoding="utf-8")
 
-name_for_save = 'default.xls'
-
-# Создаем лист в книге
-sheet1 = book.add_sheet("Дневник АД", cell_overwrite_ok=True)
-
-# Пишем заголовки в документ
-sheet1.write(0,0, "Дата", xlwt.easyxf('font: bold on;align: wrap on,vert centre, horiz center;border: left thin,right thin,top thin,bottom thin;'))
-sheet1.write(0,1, "Утро", xlwt.easyxf('font: bold on;align: wrap on,vert centre, horiz center;border: left thin,right thin,top thin,bottom thin;'))
-sheet1.write(0,2, "Вечер", xlwt.easyxf('font: bold on;align: wrap on,vert centre, horiz center;border: left thin,right thin,top thin,bottom thin;'))
-
-# Если нужно, чтобы вечерние были ниже, чем утренние
-def lower_in_evening(total_days):
+def lower_in_evening(total_days, current_list, name_for_save):
     rb = xlrd.open_workbook(name_for_save)
     sheet = rb.sheet_by_index(0)
 
@@ -33,11 +20,11 @@ def lower_in_evening(total_days):
                 dope = temp_right[0]
                 temp_right[0] = temp_left[0]
                 temp_left[0] = dope
-                sheet1.write(1 + x, 1, (temp_left[0] + '/' + temp_left[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
-                sheet1.write(1 + x, 2, (temp_right[0] + '/' + temp_right[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
+                current_list.write(1 + x, 1, (temp_left[0] + '/' + temp_left[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
+                current_list.write(1 + x, 2, (temp_right[0] + '/' + temp_right[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
 
-# Если нужно, чтобы утренние были ниже, чем вечерние
-def lower_in_morning(total_days):
+
+def lower_in_morning(total_days, current_list, name_for_save):
     rb = xlrd.open_workbook(name_for_save)
     sheet = rb.sheet_by_index(0)
 
@@ -49,8 +36,8 @@ def lower_in_morning(total_days):
                 dope = temp_right[0]
                 temp_right[0] = temp_left[0]
                 temp_left[0] = dope
-                sheet1.write(1 + x, 1, (temp_left[0] + '/' + temp_left[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
-                sheet1.write(1 + x, 2, (temp_right[0] + '/' + temp_right[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
+                current_list.write(1 + x, 1, (temp_left[0] + '/' + temp_left[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
+                current_list.write(1 + x, 2, (temp_right[0] + '/' + temp_right[1]), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
 
 # Рандомим элементы списка со значениями
 def randomOrder_key(element):
@@ -58,17 +45,72 @@ def randomOrder_key(element):
 
 def run_generator(values_dict):
 
-    start_date_f = start_date_value.get()
-    start_date = start_date_f.split('.')
+    current_book, current_list = prepare_final_list()
+
+    start_date = values_dict['Дата начала измерения:'].split('.')
     start_date_true = datetime.date(int(start_date[2]),int(start_date[1]),int(start_date[0]))
 
-    end_date_f = end_date_value.get()
-    end_date = end_date_f.split('.')
+    end_date = values_dict['Дата конца измерения:'].split('.')
     end_date_true = datetime.date(int(end_date[2]), int(end_date[1]), int(end_date[0]))
 
     total_days = int((str(end_date_true-start_date_true).split()[0])) + 1
 
     data_list = []
+
+
+    for x in range(total_days):
+        up_date = timedelta(x)
+        current_list.write(x+1 ,0,(start_date_true + up_date), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin\
+                                     ', num_format_str='DD.MM.YYYY'))
+    need_results = total_days * 2
+    need_upper = int(need_results) * ((int(values_dict['Повышенного давления, в %'])) / 100)
+
+    for x in range(math.ceil(need_upper)):
+        upper_1 = random.randint(int(values_dict['Для повышенного давления: Верхнее (первая цифра), от:']),int(values_dict['Для повышенного давления:  Верхнее, до: ']))
+        upper_2 = random.randint(int(values_dict['Для повышенного давления: Нижнее (вторая цифра), от:']),int(values_dict['Для повышенного давления:  Нижнее, до: ']))
+        data_list.append(str(upper_1) + ' / ' + str(upper_2))
+
+    for x in range(need_results-(math.ceil(need_upper))):
+        lower_1 = random.randint(int(values_dict['Для нормального давления: Верхнее (первая цифра), от:']), int(values_dict['Для нормального давления:  Верхнее, до: ']))
+        lower_2 = random.randint(int(values_dict['Для нормального давления: Нижнее (вторая цифра), от:']), int(values_dict['Для нормального давления:  Нижнее, до: ']))
+        data_list.append(str(lower_1) + ' / ' + str(lower_2))
+
+    random.shuffle(data_list)
+
+    for x in range(total_days):
+        current_list.write(x+1,1, data_list.pop(), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
+
+    for x in range(total_days):
+        current_list.write(x+1,2, data_list.pop(), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
+
+
+    name_for_save = values_dict['Введите Ваше имя:'] + ' c ' + str(start_date_true) + ' по ' + str(end_date_true) + '.xls'
+    current_book.save(name_for_save)
+    if values_dict['Условия заполнения'] == 2:
+        lower_in_evening(total_days, current_list, name_for_save)
+        current_book.save(name_for_save)
+    elif values_dict['Условия заполнения'] == 3:
+        lower_in_morning(total_days, current_list, name_for_save)
+        current_book.save(name_for_save)
+
+
+def get_data_to_generate(value,values_dict, *args):
+    label = ''
+    for a in args:
+        label += a.cget('text')
+    values_dict[label] = value.get()
+
+
+def prepare_final_list():
+
+    book = xlwt.Workbook(encoding="utf-8")
+    sheet1 = book.add_sheet("Дневник АД", cell_overwrite_ok=True)
+    normal_style = xlwt.easyxf('font: bold on;align: wrap on,vert centre, horiz center;border: left thin,right thin,top thin,bottom thin;')
+
+    # Пишем заголовки в документ
+    sheet1.write(0, 0, "Дата", normal_style)
+    sheet1.write(0, 1, "Утро", normal_style)
+    sheet1.write(0, 2, "Вечер", normal_style)
 
     first_col = sheet1.col(0)
     first_col.width = 3500
@@ -77,58 +119,7 @@ def run_generator(values_dict):
     third_col = sheet1.col(2)
     third_col.width = 3500
 
-    for x in range(total_days):
-        up_date = timedelta(x)
-        sheet1.write(x+1 ,0,(start_date_true + up_date), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin\
-                                     ', num_format_str='DD.MM.YYYY'))
-    need_results = total_days * 2
-    need_upper = int(need_results) * ((int(soot_value.get())) / 100)
-
-    for x in range(math.ceil(need_upper)):
-        upper_1 = random.randint(int(high_ad_upper_from_value.get()),int(high_ad_upper_to_value.get()))
-        upper_2 = random.randint(int(high_ad_lower_from_value.get()),int(high_ad_lower_to_value.get()))
-        data_list.append(str(upper_1) + ' / ' + str(upper_2))
-
-    for x in range(need_results-(math.ceil(need_upper))):
-        lower_1 = random.randint(int(low_ad_upper_from_value.get()), int(low_ad_upper_to_value.get()))
-        lower_2 = random.randint(int(low_ad_lower_from_value.get()), int(low_ad_lower_to_value.get()))
-        data_list.append(str(lower_1) + ' / ' + str(lower_2))
-
-    random.shuffle(data_list)
-
-    for x in range(total_days):
-        sheet1.write(x+1,1, data_list.pop(), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
-
-    for x in range(total_days):
-        sheet1.write(x+1,2, data_list.pop(), xlwt.easyxf('align: wrap yes, vert centre, horiz center; border: left thin,right thin,top thin,bottom thin;'))
-
-    global name_for_save
-    name_for_save = your_name_value.get() + ' c ' + str(start_date_f) + ' по ' + str(end_date_f) + '.xls'
-    book.save(name_for_save)
-    if lang.get() == 2:
-        lower_in_evening(total_days)
-        book.save(name_for_save)
-    elif lang.get() == 3:
-        lower_in_morning(total_days)
-        book.save(name_for_save)
-    else:
-        pass
-
-
-def run_generator(values_dict):
-    print('111')
-    ab = values_dict
-    bc = 111
-    pass
-
-def complex_label(label_first, label_second):
-    return label_first.cget('text') + label_second.cget('text')
-
-def get_data_to_generate(value,values_dict, *args):
-    label = ''
-    for a in args:
-        label += a.cget('text')
-    values_dict[label] = value.get()
+    return book, sheet1
 
 def create_and_configure_window(normal_font, normal_width, small_width, values_dict):
     start_window = Tk()
@@ -209,7 +200,7 @@ def create_and_configure_window(normal_font, normal_width, small_width, values_d
     low_ad_upper_from_value.insert(0, '125')
     get_data_to_generate(low_ad_upper_from_value, values_dict, lbl_low_ad, low_ad_upper_from_label)
 
-    low_ad_upper_to_label = Label(start_window, text=' до: ', width=small_width)
+    low_ad_upper_to_label = Label(start_window, text=' Верхнее, до: ', width=small_width)
     low_ad_upper_to_label.place(x=260, y=330)
     low_ad_upper_to_value = Entry(start_window, width=small_width)
     low_ad_upper_to_value.place(x=310, y=330)
@@ -223,7 +214,7 @@ def create_and_configure_window(normal_font, normal_width, small_width, values_d
     low_ad_lower_from_value.insert(0, '80')
     get_data_to_generate(low_ad_lower_from_value, values_dict, lbl_low_ad, low_ad_lower_from_label)
 
-    low_ad_lower_to_label = Label(start_window, text=' до: ', width=small_width)
+    low_ad_lower_to_label = Label(start_window, text=' Нижнее, до: ', width=small_width)
     low_ad_lower_to_label.place(x=260, y=360)
     low_ad_lower_to_value = Entry(start_window, width=small_width)
     low_ad_lower_to_value.place(x=310, y=360)
@@ -268,7 +259,7 @@ def create_and_configure_window(normal_font, normal_width, small_width, values_d
 
 def main():
     normal_font = ("Arial Bold", 11)
-    
+
     normal_width = 25
     small_width = 5
 
